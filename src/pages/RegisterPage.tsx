@@ -1,5 +1,5 @@
 // src/pages/RegisterPage.tsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { auth, createUserWithEmailAndPassword } from "../firebase";
 import { updateProfile } from "firebase/auth";
 
@@ -377,7 +377,7 @@ export default function RegisterPage({
         </section>
 
         {/* Right multi-step card */}
-        <section className="mt-4 w-full max-w-md flex-1 md:mt-0">
+        <section className="mt-0 w-full max-w-md flex-1 md:mt-0">
           <div className="rounded-2xl bg-white p-6 shadow-[0_18px_45px_rgba(15,23,42,0.16)] ring-1 ring-slate-200">
             {/* Step indicator */}
             <div className="flex items-center justify-between text-[0.7rem] text-slate-500">

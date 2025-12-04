@@ -34,7 +34,6 @@ export default function Navbar({
   user,
   onOpenProfile,
   onLogout,
-  onOpenChartsFull, // unused for now but kept
   theme,
   onToggleTheme,
 }: NavbarProps) {

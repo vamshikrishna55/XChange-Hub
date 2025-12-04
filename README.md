@@ -1,73 +1,131 @@
-# React + TypeScript + Vite
+# XChangeHub -- Currency Studio Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+XChangeHub is a fully-featured currency analytics dashboard built with
+**React + TypeScript + Vite**, styled with **Tailwind CSS**, and powered
+by **Firebase Authentication**.\
+It provides live-style currency conversion, FX charts, custom alerts,
+profile management, and a complete authentication system.
 
-Currently, two official plugins are available:
+------------------------------------------------------------------------
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ✨ Features
 
-## React Compiler
+### 1. Dashboard + Navigation
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+-   Converter, Charts, Alerts
+-   Smooth UI, theme toggle
 
-## Expanding the ESLint configuration
+### 2. Currency Converter
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+-   Live conversion using Frankfurter API
+-   Dynamic dropdown with flags
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 3. Charts
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+-   Inline mini-charts
+-   Full-screen chart board
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 4. Alerts System
+
+-   Price-based FX alerts
+-   Local storage persistence
+
+### 5. Authentication
+
+-   Email/password login
+-   Google OAuth
+-   Multi-step registration
+
+### 6. Profile System
+
+-   Avatar upload
+-   Edit profile & password
+-   Social links
+-   Login activity
+
+### 7. Legal Page (Privacy Policy Template)
+
+-   Prebuilt layout for help/legal pages
+
+### 8. Theming
+
+-   Tailwind + custom gradients
+-   Light/Dark mode
+
+------------------------------------------------------------------------
+
+## 🚀 Getting Started
+
+### Install
+
+``` bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Environment Setup
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Create `.env`:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+    VITE_FIREBASE_API_KEY=...
+    VITE_FIREBASE_AUTH_DOMAIN=...
+    VITE_FIREBASE_PROJECT_ID=...
+    VITE_FIREBASE_APP_ID=...
+
+### Run Dev Server
+
+``` bash
+npm run dev
 ```
+
+### Build
+
+``` bash
+npm run build
+```
+
+------------------------------------------------------------------------
+
+## 🛠 Technologies Used
+
+-   **React 18**
+-   **TypeScript**
+-   **Tailwind CSS**
+-   **Vite**
+-   **Firebase Authentication**
+-   **Frankfurter API**
+
+------------------------------------------------------------------------
+
+# 📄 MIT License
+
+MIT License
+
+Copyright (c) 2025 XChangeHub
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy\
+of this software and associated documentation files (the "Software"), to
+deal\
+in the Software without restriction, including without limitation the
+rights\
+to use, copy, modify, merge, publish, distribute, sublicense, and/or
+sell\
+copies of the Software, and to permit persons to whom the Software is\
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all\
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR\
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY,\
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE\
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM,\
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+IN THE\
+SOFTWARE.

@@ -1,5 +1,4 @@
 // src/pages/PrivacyPolicyPage.tsx
-import React from "react";
 
 type PrivacyPolicyPageProps = {
   onBack?: () => void;

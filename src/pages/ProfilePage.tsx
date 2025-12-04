@@ -5,7 +5,6 @@ import {
   Bell,
   ShieldCheck,
   Smartphone,
-  Wallet,
   LogOut,
 } from "lucide-react";
 import type { UserProfile } from "../App";
@@ -37,6 +36,23 @@ const mockAlerts: RateAlert[] = [
 
 const MAX_AVATAR_SIZE_MB = 2;
 
+// ===== FX STATE & FALLBACK (24h day rates) =====
+type FxRatesState = {
+  usdInr: number | null;
+  eurUsd: number | null;
+  usdAed: number | null;
+  asOfDate: string | null; // date string from API
+};
+
+// Safe sample values if the API is down.
+// These will be replaced as soon as a real daily rate arrives.
+const FX_FALLBACK: FxRatesState = {
+  usdInr: 83.1,
+  eurUsd: 1.09,
+  usdAed: 3.67,
+  asOfDate: null,
+};
+
 export default function ProfilePage({
   user,
   onBack,
@@ -48,9 +64,7 @@ export default function ProfilePage({
   // --- main profile state shown on card ---
   const [displayName, setDisplayName] = useState(user.displayName);
   const [email, setEmail] = useState(user.email);
-  const [about, setAbout] = useState<string>(
-    ``
-  );
+  const [about, setAbout] = useState<string>("");
 
   const [socials, setSocials] = useState<{
     twitter: string;
@@ -72,11 +86,137 @@ export default function ProfilePage({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
 
+  // 🔹 Current device location (for "This device" session)
+  const [currentLocation, setCurrentLocation] = useState<string>(
+    "Detecting location…"
+  );
+
+  // 🔹 FX rates: start from fallback so UI always has numbers
+  const [fxRates, setFxRates] = useState<FxRatesState>(FX_FALLBACK);
+  const [fxError, setFxError] = useState<string | null>(null);
+
   useEffect(() => {
     setDisplayName(user.displayName);
     setEmail(user.email);
     setAvatarPreview(user.avatarUrl ?? null);
   }, [user.displayName, user.email, user.avatarUrl]);
+
+  // ===== GEOLOCATION + REVERSE GEOCODING =====
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+      setCurrentLocation("Location not available");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+
+        (async () => {
+          try {
+            const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`;
+            const res = await fetch(url, {
+              headers: {
+                Accept: "application/json",
+              },
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+
+            const addr = data.address || {};
+            const city =
+              addr.city ||
+              addr.town ||
+              addr.village ||
+              addr.hamlet ||
+              addr.suburb;
+            const state = addr.state || addr.region;
+            const countryCode = addr.country_code
+              ? String(addr.country_code).toUpperCase()
+              : null;
+
+            const parts = [city, state, countryCode].filter(Boolean);
+            if (parts.length > 0) {
+              setCurrentLocation(parts.join(", "));
+            } else {
+              setCurrentLocation("Location detected");
+            }
+          } catch (err) {
+            console.error("Reverse geocoding failed", err);
+            setCurrentLocation(
+              `Lat ${latitude.toFixed(2)}, Lon ${longitude.toFixed(2)}`
+            );
+          }
+        })();
+      },
+      (err) => {
+        console.error("Geolocation error", err);
+        if (err.code === err.PERMISSION_DENIED) {
+          setCurrentLocation("Location access denied");
+        } else {
+          setCurrentLocation("Could not detect location");
+        }
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+      }
+    );
+  }, []);
+
+  // ===== DAILY FX RATES – same style as quick converter =====
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchRates() {
+      try {
+        setFxError(null);
+
+        const [usdInrRes, eurUsdRes, usdAedRes] = await Promise.all([
+          fetch("https://api.frankfurter.app/latest?from=USD&to=INR"),
+          fetch("https://api.frankfurter.app/latest?from=EUR&to=USD"),
+          fetch("https://api.frankfurter.app/latest?from=USD&to=AED"),
+        ]);
+
+        if (!usdInrRes.ok || !eurUsdRes.ok || !usdAedRes.ok) {
+          throw new Error("Rate API error");
+        }
+
+        const usdInrData = await usdInrRes.json();
+        const eurUsdData = await eurUsdRes.json();
+        const usdAedData = await usdAedRes.json();
+
+        if (cancelled) return;
+
+        setFxRates({
+          usdInr:
+            typeof usdInrData.rates?.INR === "number"
+              ? usdInrData.rates.INR
+              : FX_FALLBACK.usdInr,
+          eurUsd:
+            typeof eurUsdData.rates?.USD === "number"
+              ? eurUsdData.rates.USD
+              : FX_FALLBACK.eurUsd,
+          usdAed:
+            typeof usdAedData.rates?.AED === "number"
+              ? usdAedData.rates.AED
+              : FX_FALLBACK.usdAed,
+          asOfDate: usdInrData.date ?? null,
+        });
+      } catch (err) {
+        console.error("FX rate fetch failed:", err);
+        if (!cancelled) {
+          // Keep fallback values; just show an info message
+          setFxError("using last 24h sample rate.");
+        }
+      }
+    }
+
+    fetchRates();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Messages
   const [message, setMessage] = useState<string | null>(null);
@@ -139,7 +279,6 @@ export default function ProfilePage({
       const result = reader.result as string;
       setAvatarError(null);
       setAvatarPreview(result);
-      // store in profile
       onUpdateProfile({ avatarUrl: result });
       setMessage("Profile picture updated.");
     };
@@ -233,14 +372,11 @@ export default function ProfilePage({
 
     setSavingProfile(true);
     try {
-      // update name
       if (trimmedName && trimmedName !== displayName) {
         onUpdateProfile({ displayName: trimmedName });
         setDisplayName(trimmedName);
       }
 
-      // update about & socials locally
-      setAbout(trimmedEmail ? editAbout || about : editAbout || about);
       setAbout(editAbout ? `"${editAbout}"` : about);
       setSocials({
         twitter: twitterVal,
@@ -248,13 +384,11 @@ export default function ProfilePage({
         instagram: instagramVal,
       });
 
-      // update email (via prop)
       if (trimmedEmail && trimmedEmail !== email) {
         await onUpdateEmail(trimmedEmail);
         setEmail(trimmedEmail);
       }
 
-      // update password via prop if requested
       if (isPasswordChanging) {
         await onUpdatePassword(newPassword);
       }
@@ -273,7 +407,24 @@ export default function ProfilePage({
     socials.twitter && { type: "twitter", url: socials.twitter },
     socials.linkedin && { type: "linkedin", url: socials.linkedin },
     socials.instagram && { type: "instagram", url: socials.instagram },
-  ].filter(Boolean) as { type: "twitter" | "linkedin" | "instagram"; url: string }[];
+  ].filter(Boolean) as {
+    type: "twitter" | "linkedin" | "instagram";
+    url: string;
+  }[];
+
+  const usdInrDisplay =
+    fxRates.usdInr != null ? fxRates.usdInr.toFixed(2) : "--";
+  const eurUsdDisplay =
+    fxRates.eurUsd != null ? fxRates.eurUsd.toFixed(4) : "--";
+  const usdAedDisplay =
+    fxRates.usdAed != null ? fxRates.usdAed.toFixed(2) : "--";
+
+  const rateSubtitle =
+    fxRates.asOfDate && !fxError
+      ? `As of ${fxRates.asOfDate}`
+      : fxError
+      ? "Using last 24h sample rate."
+      : "Latest available rate";
 
   return (
     <div className="min-h-screen bg-slate-100 px-4 py-6 text-slate-900">
@@ -346,7 +497,7 @@ export default function ProfilePage({
               Edit profile
             </button>
 
-            {/* Social links (max 2 shown, logic is in modal) */}
+            {/* Social links */}
             <div className="mt-1 w-full space-y-2">
               {activeSocials.slice(0, 2).map((s) => (
                 <div
@@ -418,12 +569,13 @@ export default function ProfilePage({
                   <span>FX • Spot</span>
                 </div>
                 <div>
-                  <p className="text-2xl font-semibold">
-                    82.14{" "}
-                    <span className="text-xs text-emerald-600 align-middle">
-                      ▲ 0.18%
-                    </span>
+                  <p className="text-2xl font-semibold">{usdInrDisplay}</p>
+                  <p className="mt-1 text-[10px] text-slate-500">
+                    {rateSubtitle}
                   </p>
+                  {fxError && (
+                    <p className="mt-1 text-[10px] text-amber-500">{fxError}</p>
+                  )}
                   <div className="mt-2 h-10 rounded-lg bg-slate-100 relative overflow-hidden">
                     <svg
                       viewBox="0 0 100 40"
@@ -547,7 +699,7 @@ export default function ProfilePage({
                           </span>
                         </p>
                         <p className="text-[11px] text-slate-500">
-                          Orlando, USA • {lastLoginDisplay}
+                          {currentLocation} • {lastLoginDisplay}
                         </p>
                       </div>
                     </div>
@@ -596,9 +748,15 @@ export default function ProfilePage({
                     Recent FX activity
                   </p>
                   <ul className="space-y-1 text-[11px] text-slate-600">
-                    <li>• USD → INR • 250.00 • 82.14 • Today, 11:30 AM</li>
-                    <li>• EUR → USD • 120.00 • 1.09 • Yesterday, 5:42 PM</li>
-                    <li>• USD → AED • 500.00 • 3.67 • 2 days ago</li>
+                    <li>
+                      • USD → INR • 250.00 • {usdInrDisplay} • Today, 11:30 AM
+                    </li>
+                    <li>
+                      • EUR → USD • 120.00 • {eurUsdDisplay} • Yesterday, 5:42 PM
+                    </li>
+                    <li>
+                      • USD → AED • 500.00 • {usdAedDisplay} • 2 days ago
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -637,9 +795,23 @@ export default function ProfilePage({
                 Live market snapshot
               </div>
               <div className="flex flex-wrap gap-4 font-mono text-xs">
-                <Ticker label="USD → INR" value="82.14" change="+0.18%" positive />
-                <Ticker label="EUR → USD" value="1.09" change="-0.10%" />
-                <Ticker label="USD → AED" value="3.67" change="0.00%" neutral />
+                <Ticker
+                  label="USD → INR"
+                  value={usdInrDisplay}
+                  change="+0.00%"
+                  positive
+                />
+                <Ticker
+                  label="EUR → USD"
+                  value={eurUsdDisplay}
+                  change="+0.00%"
+                />
+                <Ticker
+                  label="USD → AED"
+                  value={usdAedDisplay}
+                  change="0.00%"
+                  neutral
+                />
               </div>
             </footer>
           </main>
